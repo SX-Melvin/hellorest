@@ -9,7 +9,6 @@ public Object HelloRest inherits RESTIMPL::RestAPIs
 	public List fPrototypeActionChunking = {
 		{'isFinal',-1,'is this the final chunk?',false},
 		{'chunkFile',-1,'the chunk file',false},
-		{'part',-1,'which part is this chunk?',false},
 		{'fileName',-1,'the original file name',false},
 	 	{'guid',-1,'indetifier for each chunks',false}
 	}
@@ -25,17 +24,16 @@ public Object HelloRest inherits RESTIMPL::RestAPIs
 		retVal.statusCode = 200
 		
 		string guidPath = Str.Format("%1\%2\", pathForChunKing, request.guid)
-		string chunkFilePath = Str.Format("%1\%2.part%3", guidPath, request.guid, request.part)
-		string actualFilePath = Str.Format("%1\%2", guidPath, request.fileName)
+		string chunkFilePath = Str.Format("%1%2", guidPath, request.chunkFile_filename)
+		string actualFilePath = Str.Format("%1%2", guidPath, request.fileName)
 		
 		// Create The Folder If Not Exist
 		if(!File.Exists(guidPath))
 			File.Create(guidPath)
 		end
 		
-		// Check If The Folder Is Empty
-		if(Length(File.FileList(guidPath)) == 0)
-			// If Empty Then We Create The Actual File
+		// Create The Actual File If Not Exist
+		if(!File.Exists(actualFilePath))
 			File.Create(actualFilePath)
 		end
 		
@@ -44,20 +42,28 @@ public Object HelloRest inherits RESTIMPL::RestAPIs
 			File.Create(chunkFilePath)
 		end
 		
-		$HelloRest.Utils.AppendContentToChunk(chunkFilePath, request.chunkFile)
+		$HelloRest.Utils.ReplaceContentToChunk(chunkFilePath, request.chunkFile)
 		
 		if(request.isFinal == "true")
 			string item
+			File targetFile = File.Open( actualFilePath, File.WriteBinMode )
+			
 			for item in File.FileList(guidPath)
-				integer locate = Str.LocateI($HelloRest.Utils.GetFileExtension(item), "part")
+
 				// Is This .part File?
-				if(IsDefined(locate))
-					$HelloRest.Utils.AppendContentToChunk(item, actualFilePath)
+				if(IsDefined(Str.LocateI($HelloRest.Utils.GetFileExtension(item), "part")))
+					// If Yes Then Proceed To Append All The Chunks Into The Actual File
+					$HelloRest.Utils.AppendContentToChunk(targetFile, item)
+					
+					// Delete The Chunk After Appending Then Content
+					File.Delete(item)
 				end
+				
 			end
+			
+			File.Close( targetFile ) 
 		end
 		
-//		scheduler.debugbreak()
 		return retVal
 	end
 	
