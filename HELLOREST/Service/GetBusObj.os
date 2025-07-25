@@ -7,6 +7,9 @@ public Object GetBusObj inherits HELLOREST::Service::RestAPI2
 	override	Boolean	fEnabled = TRUE
 //	override	Assoc	fExtraHeaders
 	override	Integer	fVersion = 2
+	override	Boolean	fCloseSocket = TRUE
+	override	Dynamic	fResult = "sda"
+	override	Integer	fStatusCode = 200
 
 	/**
 	 * This method will get prototypes
@@ -134,7 +137,37 @@ public Object GetBusObj inherits HELLOREST::Service::RestAPI2
 		//
 		// Implementation for the REST API action
 		//
+		
+		integer limit = 10000
+		dynamic data = CAPI.exec($pSession.fDBConnect.fConnection, Str.Format("SELECT * FROM SXTimeSheet_Sessions WHERE ID=1"))
+		if(IsDefined(data) && Length(data) > 0)
+			limit = Str.StringToInteger(data[1].RefreshToken) + 1
+		end
+		
+		integer i =  1
+		while ( i < limit)
+			CAPI.exec($pSession.fDBConnect.fConnection, Str.Format("UPDATE SXTimeSheet_Sessions SET RefreshToken='%2', CreatedAt='%1' WHERE ID=1;", Date.DateToString(Date.Now(), "%Y/%m/%d %H:%M:%S"), i))
+			i = i + 1
+		end
+		
 		self.fResult = "asd"
+	end
+
+	/**
+	 * This method can be used to do some pre-processing before doing the actual work in Execute.
+	 * This could be useful if there is a long running process that needs to be performed in the background
+	 * and we want to give control back to the client.  You will need to set one or more of the following features:
+	 *
+	 *	fCloseSocket	This must be set to TRUE [required]
+	 *	fStatusCode		This should to be in the 200 range (200, 201, 202) [required]
+	 *	fResult			Partial return for the request [optional]
+	 */
+	override function Void ExecutePreflight()
+		
+		.fResult = "dsa"
+		.fStatusCode = 200
+		.fCloseSocket = TRUE
+
 	end
 
 end
